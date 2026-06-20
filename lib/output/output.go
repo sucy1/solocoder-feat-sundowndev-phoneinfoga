@@ -38,6 +38,8 @@ func GetOutput(o OutputKey, w io.Writer) Output {
 
 func OutputKeyFromPath(path string) (OutputKey, error) {
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
+	supportedList := strings.Join(supportedFormats, ", ")
+
 	switch ext {
 	case "json":
 		return JSON, nil
@@ -46,6 +48,9 @@ func OutputKeyFromPath(path string) (OutputKey, error) {
 	case "html", "htm":
 		return HTML, nil
 	default:
-		return 0, fmt.Errorf("unsupported output format: .%s. Supported formats: %s", ext, strings.Join(supportedFormats, ", "))
+		if ext == "" {
+			return 0, fmt.Errorf("no file extension found in output path %q. Supported output formats: %s (.json, .csv, .html)", path, supportedList)
+		}
+		return 0, fmt.Errorf("unsupported output format: .%s. Supported output formats: %s (.json, .csv, .html)", ext, supportedList)
 	}
 }

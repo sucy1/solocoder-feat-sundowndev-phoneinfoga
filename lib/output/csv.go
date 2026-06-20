@@ -18,6 +18,7 @@ func NewCSVOutput(w io.Writer) *CSVOutput {
 
 func (o *CSVOutput) Write(result map[string]interface{}, errs map[string]error) error {
 	csvWriter := csv.NewWriter(o.w)
+	csvWriter.UseCRLF = true
 
 	if err := csvWriter.Write([]string{"Scanner", "Field", "Value"}); err != nil {
 		return err

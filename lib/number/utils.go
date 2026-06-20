@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	phoneiso3166 "github.com/onlinecity/go-phone-iso3166"
 	"github.com/nyaruka/phonenumbers"
@@ -36,23 +37,36 @@ func IsValid(number string) bool {
 	return len(re.FindString(number)) != 0
 }
 
-func ValidateE164(number string) error {
-	formatted := "+" + FormatNumber(number)
-	country := ParseCountryCode(formatted)
+func ValidateE164(input string) error {
+	re := regexp.MustCompile(`[\s\-\(\)\.\[\]]+`)
+	cleaned := re.ReplaceAllString(input, "")
 
-	num, err := phonenumbers.Parse(formatted, country)
+	if strings.HasPrefix(cleaned, "00") {
+		cleaned = "+" + strings.TrimPrefix(cleaned, "00")
+	} else if !strings.HasPrefix(cleaned, "+") {
+		cleaned = "+" + cleaned
+	}
+
+	digitsOnly := strings.TrimPrefix(cleaned, "+")
+	digitsRe := regexp.MustCompile(`^[0-9]+$`)
+	if !digitsRe.MatchString(digitsOnly) {
+		return fmt.Errorf("phone number %q contains invalid characters after stripping formatting (cleaned: %q). E.164 numbers may only contain digits and a leading +", input, cleaned)
+	}
+
+	e164Pattern := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+	if !e164Pattern.MatchString(cleaned) {
+		return fmt.Errorf("phone number %q is not a valid E.164 number (cleaned: %q). E.164 format: +[country_code][subscriber_number], max 15 digits total", input, cleaned)
+	}
+
+	country := ParseCountryCode(cleaned)
+
+	num, err := phonenumbers.Parse(cleaned, country)
 	if err != nil {
-		return fmt.Errorf("phone number %q is not a valid E.164 number: %v", number, err)
+		return fmt.Errorf("phone number %q is not a valid E.164 number: %v (cleaned: %q)", input, err, cleaned)
 	}
 
 	if !phonenumbers.IsValidNumber(num) {
-		return fmt.Errorf("phone number %q is not a valid E.164 number", number)
-	}
-
-	e164 := phonenumbers.Format(num, phonenumbers.E164)
-	e164Pattern := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
-	if !e164Pattern.MatchString(e164) {
-		return fmt.Errorf("phone number %q does not conform to E.164 format (must be +[country_code][subscriber_number], max 15 digits)", number)
+		return fmt.Errorf("phone number %q is not a valid E.164 number (cleaned: %q)", input, cleaned)
 	}
 
 	return nil
