@@ -21,6 +21,7 @@ type ServeCmdOptions struct {
 	DisableClient    bool
 	DisabledScanners []string
 	PluginPaths      []string
+	PluginDir        string
 	EnvFiles         []string
 }
 
@@ -35,6 +36,7 @@ func init() {
 	cmd.PersistentFlags().BoolVar(&opts.DisableClient, "no-client", false, "Disable web client (REST API only)")
 	cmd.PersistentFlags().StringArrayVarP(&opts.DisabledScanners, "disable", "D", []string{}, "Scanner to skip for the scans")
 	cmd.PersistentFlags().StringArrayVar(&opts.PluginPaths, "plugin", []string{}, "Extra scanner plugin to use for the scans")
+	cmd.PersistentFlags().StringVar(&opts.PluginDir, "plugin-dir", "", "Directory to load .so scanner plugins from")
 	cmd.PersistentFlags().StringSliceVar(&opts.EnvFiles, "env-file", []string{}, "Env files to parse environment variables from (looks for .env by default)")
 }
 
@@ -52,6 +54,13 @@ func NewServeCmd(opts *ServeCmdOptions) *cobra.Command {
 				err := remote.OpenPlugin(p)
 				if err != nil {
 					exitWithError(err)
+				}
+			}
+
+			if opts.PluginDir != "" {
+				errs := remote.LoadPluginDir(opts.PluginDir)
+				for _, e := range errs {
+					logrus.WithError(e).Warn("Plugin load error")
 				}
 			}
 

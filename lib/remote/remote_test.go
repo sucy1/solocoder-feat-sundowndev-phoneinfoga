@@ -26,12 +26,12 @@ func TestRemoteLibrary_SuccessScan(t *testing.T) {
 	}
 
 	fakeScanner := &mocks.Scanner{}
-	fakeScanner.On("Name").Return("fake").Times(2)
+	fakeScanner.On("Name").Return("fake")
 	fakeScanner.On("DryRun", *num, remote.ScannerOptions{}).Return(nil).Once()
 	fakeScanner.On("Run", *num, remote.ScannerOptions{}).Return(fakeScannerResponse{Valid: true}, nil).Once()
 
 	fakeScanner2 := &mocks.Scanner{}
-	fakeScanner2.On("Name").Return("fake2").Times(2)
+	fakeScanner2.On("Name").Return("fake2")
 	fakeScanner2.On("DryRun", *num, remote.ScannerOptions{}).Return(nil).Once()
 	fakeScanner2.On("Run", *num, remote.ScannerOptions{}).Return(fakeScannerResponse{Valid: false}, nil).Once()
 
@@ -57,7 +57,7 @@ func TestRemoteLibrary_FailedScan(t *testing.T) {
 	dummyError := errors.New("test")
 
 	fakeScanner := &mocks.Scanner{}
-	fakeScanner.On("Name").Return("fake").Times(2)
+	fakeScanner.On("Name").Return("fake")
 	fakeScanner.On("DryRun", *num, remote.ScannerOptions{}).Return(nil).Once()
 	fakeScanner.On("Run", *num, remote.ScannerOptions{}).Return(nil, dummyError).Once()
 
@@ -79,7 +79,7 @@ func TestRemoteLibrary_EmptyScan(t *testing.T) {
 	}
 
 	fakeScanner := &mocks.Scanner{}
-	fakeScanner.On("Name").Return("mockscanner").Times(2)
+	fakeScanner.On("Name").Return("mockscanner")
 	fakeScanner.On("DryRun", *num, remote.ScannerOptions{}).Return(errors.New("dummy error")).Once()
 
 	lib := remote.NewLibrary(filter.NewEngine())
@@ -166,4 +166,22 @@ func TestRemoteLibrary_AddIgnoredScanner(t *testing.T) {
 	lib.AddScanner(fakeScanner2)
 
 	assert.Equal(t, []remote.Scanner{fakeScanner}, lib.GetAllScanners())
+}
+
+func TestRemoteLibrary_DuplicateScannerOverride(t *testing.T) {
+	fakeScanner := &mocks.Scanner{}
+	fakeScanner.On("Name").Return("fake")
+	fakeScanner.On("Description").Return("original")
+
+	fakeScanner2 := &mocks.Scanner{}
+	fakeScanner2.On("Name").Return("fake")
+	fakeScanner2.On("Description").Return("override")
+
+	lib := remote.NewLibrary(filter.NewEngine())
+
+	lib.AddScanner(fakeScanner)
+	lib.AddScanner(fakeScanner2)
+
+	assert.Equal(t, []remote.Scanner{fakeScanner2}, lib.GetAllScanners())
+	assert.Equal(t, "override", lib.GetAllScanners()[0].Description())
 }

@@ -1,10 +1,12 @@
 package number
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 
 	phoneiso3166 "github.com/onlinecity/go-phone-iso3166"
+	"github.com/nyaruka/phonenumbers"
 )
 
 // FormatNumber formats a phone number to remove
@@ -32,4 +34,26 @@ func IsValid(number string) bool {
 	re := regexp.MustCompile("^[0-9]+$")
 
 	return len(re.FindString(number)) != 0
+}
+
+func ValidateE164(number string) error {
+	formatted := "+" + FormatNumber(number)
+	country := ParseCountryCode(formatted)
+
+	num, err := phonenumbers.Parse(formatted, country)
+	if err != nil {
+		return fmt.Errorf("phone number %q is not a valid E.164 number: %v", number, err)
+	}
+
+	if !phonenumbers.IsValidNumber(num) {
+		return fmt.Errorf("phone number %q is not a valid E.164 number", number)
+	}
+
+	e164 := phonenumbers.Format(num, phonenumbers.E164)
+	e164Pattern := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+	if !e164Pattern.MatchString(e164) {
+		return fmt.Errorf("phone number %q does not conform to E.164 format (must be +[country_code][subscriber_number], max 15 digits)", number)
+	}
+
+	return nil
 }

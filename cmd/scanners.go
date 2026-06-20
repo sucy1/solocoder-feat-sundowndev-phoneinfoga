@@ -8,7 +8,8 @@ import (
 )
 
 type ScannersCmdOptions struct {
-	Plugin []string
+	Plugin    []string
+	PluginDir string
 }
 
 func init() {
@@ -16,7 +17,8 @@ func init() {
 	scannersCmd := NewScannersCmd(opts)
 
 	fl := scannersCmd.Flags()
-	fl.StringSliceVar(&opts.Plugin, "plugin", []string{}, "Output file")
+	fl.StringSliceVar(&opts.Plugin, "plugin", []string{}, "Plugin file to load")
+	fl.StringVar(&opts.PluginDir, "plugin-dir", "", "Directory to load .so scanner plugins from")
 
 	rootCmd.AddCommand(scannersCmd)
 }
@@ -31,6 +33,13 @@ func NewScannersCmd(opts *ScannersCmdOptions) *cobra.Command {
 				err := remote.OpenPlugin(p)
 				if err != nil {
 					exitWithError(err)
+				}
+			}
+
+			if opts.PluginDir != "" {
+				errs := remote.LoadPluginDir(opts.PluginDir)
+				for _, e := range errs {
+					fmt.Printf("Warning: %v\n", e)
 				}
 			}
 
