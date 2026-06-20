@@ -38,20 +38,35 @@ func IsValid(number string) bool {
 }
 
 func ValidateE164(input string) error {
-	re := regexp.MustCompile(`[\s\-\(\)\.\[\]]+`)
-	cleaned := re.ReplaceAllString(input, "")
+	working := strings.ReplaceAll(input, "\u00a0", " ")
+	working = strings.ReplaceAll(working, "\u202f", " ")
+	working = strings.ReplaceAll(working, "\u3000", " ")
 
-	if strings.HasPrefix(cleaned, "00") {
-		cleaned = "+" + strings.TrimPrefix(cleaned, "00")
-	} else if !strings.HasPrefix(cleaned, "+") {
-		cleaned = "+" + cleaned
+	trimmed := strings.TrimSpace(working)
+
+	plusPrefix := false
+	switch {
+	case strings.HasPrefix(trimmed, "+"):
+		plusPrefix = true
+		trimmed = strings.TrimPrefix(trimmed, "+")
+	case strings.HasPrefix(trimmed, "00"):
+		plusPrefix = true
+		trimmed = strings.TrimPrefix(trimmed, "00")
 	}
 
-	digitsOnly := strings.TrimPrefix(cleaned, "+")
+	reStrip := regexp.MustCompile(`[\s\-\(\)\.\[\]\{\}\<\>\*\/\\\,\;\:\_\#\~\!\@\$\%\^\&\=\|\\\\\x{2010}\x{2011}\x{2012}\x{2013}\x{2014}\x{2015}\x{2212}\x{FE58}\x{FF0D}\x{FE63}]+`)
+	digitsPart := reStrip.ReplaceAllString(trimmed, "")
+
 	digitsRe := regexp.MustCompile(`^[0-9]+$`)
-	if !digitsRe.MatchString(digitsOnly) {
-		return fmt.Errorf("phone number %q contains invalid characters after stripping formatting (cleaned: %q). E.164 numbers may only contain digits and a leading +", input, cleaned)
+	if !digitsRe.MatchString(digitsPart) {
+		cleanedShow := digitsPart
+		if plusPrefix {
+			cleanedShow = "+" + cleanedShow
+		}
+		return fmt.Errorf("phone number %q contains invalid characters after stripping formatting (cleaned: %q). E.164 numbers may only contain digits and a leading +", input, cleanedShow)
 	}
+
+	cleaned := "+" + digitsPart
 
 	e164Pattern := regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 	if !e164Pattern.MatchString(cleaned) {

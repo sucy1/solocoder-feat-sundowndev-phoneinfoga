@@ -22,6 +22,20 @@ const (
 
 var supportedFormats = []string{"json", "csv", "html"}
 
+func SupportedFormats() []string {
+	out := make([]string, len(supportedFormats))
+	copy(out, supportedFormats)
+	return out
+}
+
+func SupportedFormatsString() string {
+	items := make([]string, len(supportedFormats))
+	for i, f := range supportedFormats {
+		items[i] = fmt.Sprintf("%s (.%s)", f, f)
+	}
+	return strings.Join(items, ", ")
+}
+
 func GetOutput(o OutputKey, w io.Writer) Output {
 	switch o {
 	case Console:
@@ -38,7 +52,7 @@ func GetOutput(o OutputKey, w io.Writer) Output {
 
 func OutputKeyFromPath(path string) (OutputKey, error) {
 	ext := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-	supportedList := strings.Join(supportedFormats, ", ")
+	formatsList := SupportedFormatsString()
 
 	switch ext {
 	case "json":
@@ -49,8 +63,8 @@ func OutputKeyFromPath(path string) (OutputKey, error) {
 		return HTML, nil
 	default:
 		if ext == "" {
-			return 0, fmt.Errorf("no file extension found in output path %q. Supported output formats: %s (.json, .csv, .html)", path, supportedList)
+			return 0, fmt.Errorf("no file extension found in output path %q. Supported output formats: %s", path, formatsList)
 		}
-		return 0, fmt.Errorf("unsupported output format: .%s. Supported output formats: %s (.json, .csv, .html)", ext, supportedList)
+		return 0, fmt.Errorf("unsupported output format: .%s. Supported output formats: %s", ext, formatsList)
 	}
 }

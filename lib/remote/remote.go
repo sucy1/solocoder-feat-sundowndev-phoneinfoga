@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"strings"
 	"github.com/sirupsen/logrus"
 	"github.com/sundowndev/phoneinfoga/v2/lib/filter"
 	"github.com/sundowndev/phoneinfoga/v2/lib/number"
@@ -251,18 +252,8 @@ func dedupStruct(data interface{}, scannerName, prefix string, seen map[string]s
 			continue
 		}
 		fieldName := jsonTag
-		if idx := len(fieldName); idx > 0 {
-			if commaIdx := 0; commaIdx >= 0 {
-				for j, c := range fieldName {
-					if c == ',' {
-						commaIdx = j
-						break
-					}
-				}
-				if commaIdx > 0 {
-					fieldName = fieldName[:commaIdx]
-				}
-			}
+		if commaIdx := strings.Index(jsonTag, ","); commaIdx >= 0 {
+			fieldName = jsonTag[:commaIdx]
 		}
 		if fieldName == "" {
 			fieldName = field.Name
@@ -376,15 +367,29 @@ func countStructFields(data interface{}) int {
 	}
 
 	for i := 0; i < reflectType.NumField(); i++ {
-		jsonTag := reflectType.Field(i).Tag.Get("json")
+		field := reflectType.Field(i)
+		fieldValue := reflectValue.Field(i)
+		jsonTag := field.Tag.Get("json")
 		if jsonTag == "-" {
 			continue
 		}
-		switch reflectValue.Field(i).Kind() {
+		switch fieldValue.Kind() {
 		case reflect.Struct:
-			c += countStructFields(reflectValue.Field(i).Interface())
+			c += countStructFields(fieldValue.Interface())
 		case reflect.Slice:
-			c += countStructFields(reflectValue.Field(i).Interface())
+			c += countStructFields(fieldValue.Interface())
+		case reflect.String:
+			if fieldValue.String() != "" {
+				c++
+			}
+		case reflect.Bool:
+			if fieldValue.Bool() {
+				c++
+			}
+		case reflect.Int, reflect.Int32, reflect.Int64:
+			if fieldValue.Int() != 0 {
+				c++
+			}
 		default:
 			c++
 		}
